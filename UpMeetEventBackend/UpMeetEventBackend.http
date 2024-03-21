@@ -1,6 +1,0 @@
-@UpMeetEventBackend_HostAddress = http://localhost:5135
-
-GET {{UpMeetEventBackend_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
