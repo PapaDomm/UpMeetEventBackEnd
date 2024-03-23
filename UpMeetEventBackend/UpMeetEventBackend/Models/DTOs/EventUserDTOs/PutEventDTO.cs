@@ -10,6 +10,10 @@
 
         public DateTime? EndDate { get; set; }
 
+        public string? City { get; set; }
+
+        public string? State { get; set; }
+
         public bool? Expired { get; set; }
 
         public virtual IFormFile? Image { get; set; }

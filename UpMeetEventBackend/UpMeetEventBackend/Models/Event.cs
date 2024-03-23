@@ -23,5 +23,9 @@ public partial class Event
 
     public virtual Image? Image { get; set; }
 
+    public string City { get; set; } = null!;
+
+    public string State { get; set; } = null!;
+
     public virtual ICollection<User> Users { get; set; } = new List<User>();
 }

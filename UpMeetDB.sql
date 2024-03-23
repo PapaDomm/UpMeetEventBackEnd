@@ -14,7 +14,7 @@ CREATE TABLE [User] (
 	FirstName NVARCHAR(20) NOT NULL,
 	LastName NVARCHAR(20) NOT NULL,
 	UserName NVARCHAR(30) NOT NULL,
-	Password NVARCHAR(35) NOT NULL,
+	[Password] NVARCHAR(35) NOT NULL,
 	Bio NVARCHAR(2000),
 	ImageID INT,
 	Active BIT NOT NULL DEFAULT 'true',
@@ -36,6 +36,8 @@ CREATE TABLE [Event] (
 	EndDate DATE NOT NULL,
 	Expired BIT NOT NULL DEFAULT 'false',
 	Active BIT NOT NULL DEFAULT 'true',
+	City NVARCHAR(100) NOT NULL DEFAULT 'Detroit',
+	[State] NVARCHAR(2) NOT NULL DEFAULT 'MI',
 
 	--CONSTRAINTS
 	--PRIMARY KEY
@@ -79,3 +81,5 @@ select * from  Images
 select * from [User]
 
 select * from UserFavorites
+
+drop database UpMeetDB

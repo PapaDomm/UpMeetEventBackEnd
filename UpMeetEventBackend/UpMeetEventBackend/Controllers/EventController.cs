@@ -55,6 +55,8 @@ namespace UpMeetEventBackend.Controllers
                 EndDate = e.EndDate,
                 Expired = e.Expired,
                 Active = e.Active,
+                City = e.City,
+                State = e.State,
                 Users = e.Users.Select(u => convertBasicUserDTO(u)).ToList()
             };
         }
@@ -62,14 +64,14 @@ namespace UpMeetEventBackend.Controllers
         //Implement FromQuery?
         //Implement More Indepth Querying
         [HttpGet]
-        public IActionResult getAllEvents(string? name = null, DateTime? startdate = null, DateTime? enddate = null, bool? expired = null)
+        public IActionResult getAllEvents(string? name = null, DateTime? startdate = null, DateTime? enddate = null, string? city = null, string? state = null, bool? expired = null)
         {
-            List<EventDTO> result = dbContext.Events.Include(i => i.Image).Where(e => e.Active == true).Select(e => convertEventDTO(e)).ToList();
+            List<EventDTO> result = dbContext.Events.Include(u => u.Users.Where(u => u.Active == true)).ThenInclude(i => i.Image).Include(i => i.Image).Where(e => e.Active == true).Select(e => convertEventDTO(e)).ToList();
 
-            //Set to lower
+            
             if (name != null)
             {
-                result = result.Where(e => e.Name.Contains(name)).ToList();
+                result = result.Where(e => e.Name.ToLower().Contains(name.ToLower())).ToList();
             }
             //Fix dates logic should remove those not in bounds
             if(startdate != null)
@@ -79,6 +81,14 @@ namespace UpMeetEventBackend.Controllers
             if(enddate != null)
             {
                 result = result.Where(e => e.EndDate < enddate).ToList();
+            }
+            if(city != null)
+            {
+                result = result.Where(e => e.City.ToLower().Contains(city.ToLower())).ToList();
+            }
+            if (state != null)
+            {
+                result = result.Where(e => e.State.ToLower() == state.ToLower()).ToList();
             }
             if(expired != null)
             {
@@ -91,7 +101,7 @@ namespace UpMeetEventBackend.Controllers
         [HttpGet("{id}")]
         public IActionResult getById(int id)
         {
-            Event result = dbContext.Events.Include(i => i.Image).FirstOrDefault(e => e.EventId == id);
+            Event result = dbContext.Events.Include(u => u.Users.Where(u => u.Active == true)).ThenInclude(i => i.Image).Include(i => i.Image).FirstOrDefault(e => e.EventId == id);
 
             if(result == null || result.Active == false)
             {
@@ -115,9 +125,10 @@ namespace UpMeetEventBackend.Controllers
                 return NotFound("Event Not Found");
             }
 
-            Event updateEvent = dbContext.Events.Find(id);
+            Event updateEvent = dbContext.Events.Include(u => u.Users.Where(u => u.Active == true)).ThenInclude(i => i.Image).Include(i => i.Image).FirstOrDefault(e => e.EventId == id);
 
-            if(targetEvent.Name != null)
+
+            if (targetEvent.Name != null)
             {
                 updateEvent.Name = targetEvent.Name;
             }
@@ -137,6 +148,14 @@ namespace UpMeetEventBackend.Controllers
             {
                 updateEvent.Expired = (bool)targetEvent.Expired;
             }
+            if(targetEvent.City != null)
+            {
+                updateEvent.City = targetEvent.City;
+            }
+            if(targetEvent.State != null)
+            {
+                updateEvent.State = targetEvent.State;
+            }
             if(targetEvent.Image != null)
             {
                 Image newImage = uploader.Upload(targetEvent.Image);
@@ -153,9 +172,10 @@ namespace UpMeetEventBackend.Controllers
             dbContext.Events.Update(updateEvent);
             dbContext.SaveChanges();
 
-            return NoContent();            
+            return Ok(convertEventDTO(updateEvent));            
         }
 
+        
         [HttpPost]
         public IActionResult addNewEvent([FromForm] PostEventDTO newEvent)
         {
@@ -175,6 +195,8 @@ namespace UpMeetEventBackend.Controllers
             newEventDB.StartDate = newEvent.StartDate;
             newEventDB.EndDate = newEvent.EndDate;
             newEventDB.Expired = newEvent.Expired;
+            newEventDB.City = newEvent.City;
+            newEventDB.State = newEvent.State;
             if(newEvent.Image != null)
             {
                 Image newImage = uploader.Upload(newEvent.Image);
@@ -185,7 +207,9 @@ namespace UpMeetEventBackend.Controllers
             dbContext.Events.Add(newEventDB);
             dbContext.SaveChanges();
 
-            return CreatedAtAction(nameof(getById), new {id = newEventDB.EventId}, convertEventDTO(newEventDB));
+            Event returnEvent = dbContext.Events.Include(u => u.Users.Where(u => u.Active == true)).ThenInclude(i => i.Image).Include(i => i.Image).FirstOrDefault(e => e.EventId == newEventDB.EventId);
+
+            return CreatedAtAction(nameof(getById), new {id = newEventDB.EventId}, convertEventDTO(returnEvent));
         }
 
         [HttpDelete("{id}")]

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 using UpMeetEventBackend.Models;
 using UpMeetEventBackend.Models.DTOs;
 using UpMeetEventBackend.Models.DTOs.EventUserDTOs;
@@ -63,7 +64,7 @@ namespace UpMeetEventBackend.Controllers
         [HttpGet]
         public IActionResult getAllUsers(string? username = null)
         {
-            List<UserDTO> result = dbContext.Users.Include(e => e.Events).ThenInclude(i => i.Image).Include(i => i.Image).Where(u => u.Active == true).Select(u => convertUserDTO(u)).ToList();
+            List<UserDTO> result = dbContext.Users.Include(e => e.Events.Where(e => e.Active == true)).ThenInclude(i => i.Image).Include(i => i.Image).Where(u => u.Active == true).Select(u => convertUserDTO(u)).ToList();
 
             if(username != null)
             {
@@ -76,7 +77,7 @@ namespace UpMeetEventBackend.Controllers
         [HttpGet("{id}")]
         public IActionResult getById(int id)
         {
-            User result = dbContext.Users.Include(e => e.Events).ThenInclude(i => i.Image).Include(i => i.Image).FirstOrDefault(u => u.UserId == id);
+            User result = dbContext.Users.Include(e => e.Events.Where(e => e.Active == true)).ThenInclude(i => i.Image).Include(i => i.Image).FirstOrDefault(u => u.UserId == id);
 
             if(result == null || result.Active == false)
             {
@@ -89,7 +90,7 @@ namespace UpMeetEventBackend.Controllers
         [HttpGet("Login")]
         public IActionResult login(string username, string password)
         {
-            User result = dbContext.Users.Include(e => e.Events).ThenInclude(i => i.Image).Include(i => i.Image).FirstOrDefault(u => u.UserName == username && u.Password == password);
+            User result = dbContext.Users.Include(e => e.Events.Where(e => e.Active == true)).ThenInclude(i => i.Image).Include(i => i.Image).FirstOrDefault(u => u.UserName == username && u.Password == password);
 
             if(result == null || result.Active == false)
             {
@@ -136,7 +137,7 @@ namespace UpMeetEventBackend.Controllers
         }
 
 
-       
+        
         [HttpPut("{id}")]
         public IActionResult updateUserInfo([FromForm] PutUserDTO targetUser, int id)
         {
@@ -150,7 +151,7 @@ namespace UpMeetEventBackend.Controllers
                 return NotFound("User Not Found");
             }
 
-            User updateUser = dbContext.Users.Include(i => i.Image).FirstOrDefault(u => u.UserId == id);
+            User updateUser = dbContext.Users.Include(e => e.Events.Where(e => e.Active == true)).ThenInclude(i => i.Image).Include(i => i.Image).FirstOrDefault(u => u.UserId == id);
 
             if (targetUser.FirstName != null)
             {
@@ -188,50 +189,50 @@ namespace UpMeetEventBackend.Controllers
             dbContext.Users.Update(updateUser);
             dbContext.SaveChanges();
 
-            return NoContent();
+            return Ok(convertUserDTO(updateUser));
         }
 
-        
+        //Should Be GET??
         [HttpPut("AddToFavorites")]
-        public IActionResult addFavoriteEvent(int Uid, int Eid)
+        public IActionResult addFavoriteEvent([FromBody] UserFavorite userFav)
         {
-            User Uresult = dbContext.Users.Include(e => e.Events).FirstOrDefault(u => u.UserId == Uid);
-            Event Eresult = dbContext.Events.Include(u => u.Users).FirstOrDefault(e => e.EventId == Eid);
+            User Uresult = dbContext.Users.Include(i => i.Image).Include(e => e.Events.Where(e => e.Active == true)).ThenInclude(i => i.Image).FirstOrDefault(u => u.UserId == userFav.UserId);
+            Event Eresult = dbContext.Events.Include(i => i.Image).Include(u => u.Users).ThenInclude(i => i.Image).FirstOrDefault(e => e.EventId == userFav.EventId);
 
-            if(!Uresult.Events.Any(e => e.EventId == Eid))
+            if (!Uresult.Events.Any(e => e.EventId == userFav.EventId))
             {
-                dbContext.Users.Find(Uid).Events.Add(Eresult);
+                dbContext.Users.Find(userFav.UserId).Events.Add(Eresult);
             }
-            if(!Eresult.Users.Any(u => u.UserId  == Uid))
+            if(!Eresult.Users.Any(u => u.UserId  == userFav.UserId))
             {
-                dbContext.Events.Find(Eid).Users.Add(Uresult);
+                dbContext.Events.Find(userFav.EventId).Users.Add(Uresult);
             }
             
             dbContext.SaveChanges();
 
-            return NoContent();
+            return Ok(convertUserDTO(Uresult));
         }
 
         
         [HttpPut("RemoveFavorites")]
-        public IActionResult deleteFavoriteEvent(int Uid, int Eid)
+        public IActionResult deleteFavoriteEvent([FromBody] UserFavorite userFav)
         {
-            User Uresult = dbContext.Users.Include(e => e.Events).FirstOrDefault(u => u.UserId == Uid);
-            Event Eresult = dbContext.Events.Include(u => u.Users).FirstOrDefault(e => e.EventId == Eid);
+            User Uresult = dbContext.Users.Include(i => i.Image).Include(e => e.Events.Where(e => e.Active == true)).ThenInclude(i => i.Image).FirstOrDefault(u => u.UserId == userFav.UserId);
+            Event Eresult = dbContext.Events.Include(i => i.Image).Include(u => u.Users).ThenInclude(i => i.Image).FirstOrDefault(e => e.EventId == userFav.EventId);
 
-            if(Uresult.Events.Any(e => e.EventId == Eid))
+            if (Uresult.Events.Any(e => e.EventId == userFav.EventId))
             {
-                dbContext.Users.Find(Uid).Events.Remove(Eresult);
+                dbContext.Users.Find(userFav.UserId).Events.Remove(Eresult);
             }
-            if(Eresult.Users.Any(u =>u.UserId == Uid))
+            if (Eresult.Users.Any(u => u.UserId == userFav.UserId))
             {
-                dbContext.Events.Find(Eid).Users.Remove(Uresult);
+                dbContext.Events.Find(userFav.EventId).Users.Remove(Uresult);
             }
-            
-            
+
+
             dbContext.SaveChanges();
 
-            return NoContent();
+            return Ok(convertUserDTO(Uresult));
         }
 
         [HttpDelete("{id}")]
@@ -245,6 +246,8 @@ namespace UpMeetEventBackend.Controllers
             }
 
             result.Active = false;
+
+
 
             dbContext.Users.Update(result);
             dbContext.SaveChanges();
